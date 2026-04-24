@@ -1160,7 +1160,8 @@ const SUPABASE_URL = "https://hfuvrkdkiemhjwvnicmj.supabase.co";      // <--- CA
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmdXZya2RraWVtaGp3dm5pY21qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTM2MDUsImV4cCI6MjA5MTc2OTYwNX0.xJz4D7jut0Iz58oY_rl18CFocas-g_60Js9oFUPZToM";                     // <--- CAMBIAR
 // ===============================================================
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const { createClient } = supabase;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Elementos DOM nuevos
 const authContainer = document.getElementById('auth-container');
