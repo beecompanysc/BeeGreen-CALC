@@ -1154,41 +1154,161 @@
 
     <!-- ========== SCRIPT PRINCIPAL ========== -->
     <script>
+        <script>
         // ==================== CONFIGURACION SUPABASE ====================
-const SUPABASE_URL = "https://hfuvrkdkiemhjwvnicmj.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmdXZya2RraWVtaGp3dm5pY21qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTM2MDUsImV4cCI6MjA5MTc2OTYwNX0.xJz4D7jut0Iz58oY_rl18CFocas-g_60Js9oFUPZToM";
-// ===============================================================
+        const SUPABASE_URL = "https://hfuvrkdkiemhjwvnicmj.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmdXZya2RraWVtaGp3dm5pY21qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTM2MDUsImV4cCI6MjA5MTc2OTYwNX0.xJz4D7jut0Iz58oY_rl18CFocas-g_60Js9oFUPZToM";
+        // ===============================================================
 
-// Crear cliente de Supabase
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // CORRECCION: Usar nombre diferente para el cliente
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Login con signInWithPassword
-const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        // Elementos DOM
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
 
-// Registro con signUp
-const { data, error } = await supabaseClient.auth.signUp({ 
-    email, 
-    password,
-    options: {
-        emailRedirectTo: window.location.origin
-    }
-});
+        // Funciones de autenticacion
+        function showAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[data-auth-tab="${tab}"]`).classList.add('active');
+            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('register-error').style.display = 'none';
+            document.getElementById('register-success').style.display = 'none';
+        }
 
-// Logout
-await supabaseClient.auth.signOut();
+        document.querySelectorAll('.auth-tab').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                showAuthTab(btn.getAttribute('data-auth-tab'));
+            });
+        });
 
-// Verificar sesion activa
-const { data: { session } } = await supabaseClient.auth.getSession();
+        // Login - CORREGIDO: usa supabaseClient
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+            const btn = document.getElementById('btn-login');
+            
+            errorDiv.style.display = 'none';
+            
+            if (!email || !password) {
+                errorDiv.textContent = 'Completa todos los campos';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Ingresando...';
+            
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            
+            btn.disabled = false;
+            btn.textContent = 'Ingresar al Sistema';
+            
+            if (error) {
+                let mensaje = error.message;
+                if (mensaje.includes('Invalid login')) mensaje = 'Email o contrasena incorrectos';
+                if (mensaje.includes('Email not confirmed')) mensaje = 'Debes confirmar tu email antes de iniciar sesion';
+                errorDiv.textContent = mensaje;
+                errorDiv.style.display = 'block';
+            } else {
+                cargarSesion(data.user);
+            }
+        });
 
-// Escuchar cambios de autenticacion
-supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-        // Usuario logeado
-    }
-    if (event === 'SIGNED_OUT') {
-        // Usuario deslogeado
-    }
-});
+        // Registro - CORREGIDO: usa supabaseClient
+        document.getElementById('btn-register').addEventListener('click', async () => {
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const errorDiv = document.getElementById('register-error');
+            const successDiv = document.getElementById('register-success');
+            const btn = document.getElementById('btn-register');
+            
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            if (!email || !password || password.length < 6) {
+                errorDiv.textContent = 'Email valido y contrasena de al menos 6 caracteres.';
+                errorDiv.style.display = 'block';
+                errorDiv.style.cssText = 'display:block; background:#f8d7da; color:#721c24; padding:10px; border-radius:8px; margin-bottom:15px;';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
+            
+            const { data, error } = await supabaseClient.auth.signUp({ 
+                email, 
+                password,
+                options: {
+                    emailRedirectTo: window.location.origin
+                }
+            });
+            
+            btn.disabled = false;
+            btn.textContent = 'Registrarse';
+            
+            if (error) {
+                let mensaje = error.message;
+                if (mensaje.includes('already registered')) mensaje = 'Este email ya esta registrado';
+                errorDiv.textContent = mensaje;
+                errorDiv.style.cssText = 'display:block; background:#f8d7da; color:#721c24; padding:10px; border-radius:8px; margin-bottom:15px;';
+            } else {
+                if (data.user && !data.session) {
+                    successDiv.textContent = 'Revisa tu email para confirmar tu cuenta.';
+                } else {
+                    successDiv.textContent = 'Registro exitoso. Ya puedes iniciar sesion!';
+                }
+                successDiv.style.display = 'block';
+                setTimeout(() => showAuthTab('login'), 2500);
+            }
+        });
+
+        function cargarSesion(user) {
+            authContainer.style.display = 'none';
+            appContainer.style.display = 'block';
+            
+            const header = document.querySelector('.header');
+            if (header && !document.getElementById('user-welcome')) {
+                const welcomeDiv = document.createElement('div');
+                welcomeDiv.id = 'user-welcome';
+                welcomeDiv.style.cssText = 'display:flex; align-items:center; gap:15px; justify-content:center; margin-top:10px;';
+                welcomeDiv.innerHTML = `
+                    <div style="background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:50px; font-size:0.9rem;">${user.email}</div>
+                    <button id="logout-button" style="background:rgba(0,0,0,0.3); border:none; padding:8px 16px; border-radius:30px; color:white; cursor:pointer;">Cerrar Sesion</button>
+                `;
+                header.appendChild(welcomeDiv);
+                
+                document.getElementById('logout-button').addEventListener('click', async () => {
+                    await supabaseClient.auth.signOut();
+                    location.reload();
+                });
+            }
+        }
+
+        async function verificarSesionActual() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session?.user) {
+                cargarSesion(session.user);
+            } else {
+                authContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+            }
+        }
+
+        // Escuchar cambios en la autenticacion - CORREGIDO: usa supabaseClient
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) cargarSesion(session.user);
+            if (event === 'SIGNED_OUT') {
+                authContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+            }
+        });
+
+        // Iniciar verificacion al cargar la pagina
+        verificarSesionActual();
         // --------------------------------------------------------------
         // 1. BASE DE DATOS DE ALIMENTOS (Venezuela)
         // --------------------------------------------------------------
