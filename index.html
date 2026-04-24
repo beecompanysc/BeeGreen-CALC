@@ -1154,125 +1154,41 @@
 
     <!-- ========== SCRIPT PRINCIPAL ========== -->
     <script>
-        // ==================== CONFIGURACIÓN SUPABASE ====================
-// 🔴 REEMPLAZA ESTOS VALORES CON LOS DATOS DE TU PROYECTO SUPABASE 🔴
-const SUPABASE_URL = "https://hfuvrkdkiemhjwvnicmj.supabase.co";      // <--- CAMBIAR
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmdXZya2RraWVtaGp3dm5pY21qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTM2MDUsImV4cCI6MjA5MTc2OTYwNX0.xJz4D7jut0Iz58oY_rl18CFocas-g_60Js9oFUPZToM";                     // <--- CAMBIAR
+        // ==================== CONFIGURACION SUPABASE ====================
+const SUPABASE_URL = "https://hfuvrkdkiemhjwvnicmj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmdXZya2RraWVtaGp3dm5pY21qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxOTM2MDUsImV4cCI6MjA5MTc2OTYwNX0.xJz4D7jut0Iz58oY_rl18CFocas-g_60Js9oFUPZToM";
 // ===============================================================
 
-const { createClient } = supabase;
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Crear cliente de Supabase
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Elementos DOM nuevos
-const authContainer = document.getElementById('auth-container');
-const appContainer = document.getElementById('app-container');
-const userEmailSpan = document.createElement('span'); // lo agregaremos luego dinámicamente
+// Login con signInWithPassword
+const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
-// Funciones de autenticación
-function showAuthTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-auth-tab="${tab}"]`).classList.add('active');
-    document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
-    document.getElementById('login-error').style.display = 'none';
-    document.getElementById('register-error').style.display = 'none';
-    document.getElementById('register-success').style.display = 'none';
-}
-
-document.querySelectorAll('.auth-tab').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        showAuthTab(btn.getAttribute('data-auth-tab'));
-    });
-});
-
-// Login
-document.getElementById('btn-login').addEventListener('click', async () => {
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const errorDiv = document.getElementById('login-error');
-    errorDiv.style.display = 'none';
-    if (!email || !password) {
-        errorDiv.textContent = 'Completa todos los campos';
-        errorDiv.style.display = 'block';
-        return;
-    }
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-        errorDiv.textContent = error.message;
-        errorDiv.style.display = 'block';
-    } else {
-        cargarSesion(data.user);
+// Registro con signUp
+const { data, error } = await supabaseClient.auth.signUp({ 
+    email, 
+    password,
+    options: {
+        emailRedirectTo: window.location.origin
     }
 });
 
-// Registro
-document.getElementById('btn-register').addEventListener('click', async () => {
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value;
-    const errorDiv = document.getElementById('register-error');
-    const successDiv = document.getElementById('register-success');
-    errorDiv.style.display = 'none';
-    successDiv.style.display = 'none';
-    if (!email || !password || password.length < 6) {
-        errorDiv.textContent = 'Email válido y contraseña de al menos 6 caracteres.';
-        errorDiv.style.display = 'block';
-        return;
-    }
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-        errorDiv.textContent = error.message;
-        errorDiv.style.display = 'block';
-    } else {
-        successDiv.textContent = 'Registro exitoso. ¡Ya puedes iniciar sesión!';
-        successDiv.style.display = 'block';
-        setTimeout(() => showAuthTab('login'), 2000);
-    }
-});
+// Logout
+await supabaseClient.auth.signOut();
 
-function cargarSesion(user) {
-    authContainer.style.display = 'none';
-    appContainer.style.display = 'block';
-    // Agregar barra de usuario en el header
-    const header = document.querySelector('.header');
-    if (header && !document.getElementById('user-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.id = 'user-welcome';
-        welcomeDiv.style.display = 'flex';
-        welcomeDiv.style.alignItems = 'center';
-        welcomeDiv.style.gap = '15px';
-        welcomeDiv.innerHTML = `
-            <div style="background:rgba(255,255,255,0.2); padding:8px 16px; border-radius:50px; font-size:0.9rem;">${user.email}</div>
-            <button id="logout-button" style="background:rgba(0,0,0,0.3); border:none; padding:8px 16px; border-radius:30px; color:white; cursor:pointer;">🚪 Cerrar Sesión</button>
-        `;
-        header.appendChild(welcomeDiv);
-        document.getElementById('logout-button').addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            location.reload(); // Recargar para mostrar login
-        });
-    }
-}
+// Verificar sesion activa
+const { data: { session } } = await supabaseClient.auth.getSession();
 
-async function verificarSesionActual() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-        cargarSesion(session.user);
-    } else {
-        authContainer.style.display = 'block';
-        appContainer.style.display = 'none';
+// Escuchar cambios de autenticacion
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+        // Usuario logeado
     }
-}
-
-// Escuchar cambios en la autenticación
-supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) cargarSesion(session.user);
     if (event === 'SIGNED_OUT') {
-        authContainer.style.display = 'block';
-        appContainer.style.display = 'none';
+        // Usuario deslogeado
     }
 });
-
-// Iniciar verificación al cargar la página
-verificarSesionActual();
         // --------------------------------------------------------------
         // 1. BASE DE DATOS DE ALIMENTOS (Venezuela)
         // --------------------------------------------------------------
